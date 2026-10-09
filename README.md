@@ -9,14 +9,14 @@
 
 ## 快速安装
 
-在 **PVE 宿主机** 上操作。Home Assistant 应已配置 MQTT 集成，并且宿主机能连接 MQTT broker。
+在 **PVE 宿主机的 root 终端** 上操作。以下命令以 root 运行；非 root 用户需要加 `sudo`。Home Assistant 应已配置 MQTT 集成，并且宿主机能连接 MQTT broker。
 
 从 [Releases](https://github.com/kuailezhiyuan/SentryLab-PVE/releases) 下载 `.deb`，或运行：
 
 ```sh
 curl -fLO https://github.com/kuailezhiyuan/SentryLab-PVE/releases/download/v1.1.0/sentrylab-pve_1.1.0-1_all.deb
-sudo apt install ./sentrylab-pve_1.1.0-1_all.deb
-sudo sentrylab configure
+apt install ./sentrylab-pve_1.1.0-1_all.deb
+sentrylab configure
 ```
 
 配置向导询问 MQTT 地址、端口、用户名、密码和 TLS。密码输入不回显，保存为
@@ -43,16 +43,16 @@ ZFS scrub、PVE 配置修改或主机重启。某个传感器暂时读不到不�
 检查本机可读取的温度（不连接 MQTT）：
 
 ```sh
-sudo sentrylab check
+sentrylab check
 ```
 
 需要 SATA SMART 温度时：
 
 ```sh
-sudo apt install smartmontools
+apt install smartmontools
 sudoedit /etc/sentrylab/sentrylab.conf
 # 在 [sensors] 下设置 smart = true
-sudo systemctl start sentrylab-pve.service
+systemctl start sentrylab-pve.service
 ```
 
 SMART 查询跳过 standby 状态硬盘；部分 USB 桥无法可靠报告电源状态，不能保证所有
@@ -64,16 +64,16 @@ SentryLab 不管理该服务。仅需 CPU/NVMe/hwmon 温度时无需安装它。
 默认每分钟运行一次，开机约两分钟后开始。定时器和服务名称固定，不扫描或改动其他服务。
 
 ```sh
-sudo sentrylab status
-sudo sentrylab disable     # 停止当前采集，并关闭开机运行
-sudo sentrylab enable      # 恢复开机运行
-sudo systemctl start sentrylab-pve.service  # 手动采集并推送一次
-sudo journalctl -u sentrylab-pve.service -n 50 --no-pager
+sentrylab status
+sentrylab disable     # 停止当前采集，并关闭开机运行
+sentrylab enable      # 恢复开机运行
+systemctl start sentrylab-pve.service  # 手动采集并推送一次
+journalctl -u sentrylab-pve.service -n 50 --no-pager
 ```
 
 `/etc/sentrylab/sentrylab.conf` 是 INI 文件，不执行 shell。支持自定义 `host_id`、
 MQTT topic/discovery 前缀、TLS 和私有 CA。多台 PVE 应使用不同且稳定的 `host_id`。
-更改 broker 前可先运行 `sudo sentrylab cleanup`，清理旧 broker 上的发现实体。
+更改 broker 前可先运行 `sentrylab cleanup`，清理旧 broker 上的发现实体。
 
 | 位置 | 用途 |
 | --- | --- |
@@ -114,9 +114,9 @@ broker 重启后可恢复。默认五分钟没有新温度即显示不可用，�
 安装新 `.deb` 即升级，Debian 会保留编辑过的配置。手动关闭的定时器不会被升级重新启用。
 
 ```sh
-sudo apt install ./sentrylab-pve_新版_all.deb
-sudo apt remove sentrylab-pve   # 停止服务、删除程序；保留配置和运行数据
-sudo apt purge sentrylab-pve    # 同时删除配置和运行数据
+apt install ./sentrylab-pve_新版_all.deb
+apt remove sentrylab-pve   # 停止服务、删除程序；保留配置和运行数据
+apt purge sentrylab-pve    # 同时删除配置和运行数据
 ```
 
 卸载尝试删除本机记录的 retained discovery 配置，不使用 MQTT 通配符。
@@ -129,7 +129,7 @@ broker 离线、认证失败或不可达时，清理失败会给出提示，但�
 在 Debian 上安装构建工具：
 
 ```sh
-sudo apt install build-essential debhelper dpkg-dev fakeroot python3 python3-paho-mqtt
+apt install build-essential debhelper dpkg-dev fakeroot python3 python3-paho-mqtt
 sh tools/build-deb.sh
 ```
 
