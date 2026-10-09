@@ -1,0 +1,53 @@
+.TH SENTRYLAB 1 "October 2026" "SentryLab 1.1.0"
+.SH NAME
+sentrylab \- publish PVE CPU and disk temperatures to MQTT
+.SH SYNOPSIS
+.B sentrylab
+.RB [ --config " file" ]
+.I command
+.SH DESCRIPTION
+SentryLab reads Intel/AMD CPU and NVMe/hwmon disk temperatures and publishes
+Home Assistant MQTT discovery. Optional SMART queries skip standby disks.
+The package installs a systemd timer that runs once per minute.
+.SH COMMANDS
+.TP
+.B configure
+Interactively save MQTT credentials. Password input is hidden.
+Enable the timer and publish an initial sample when systemd is running.
+.TP
+.B check
+Print collected temperatures without connecting to MQTT.
+Optional SMART collection can still access awake disks.
+.TP
+.B run
+Publish one sample and retained discovery configurations.
+.TP
+.B ready
+Exit successfully only when MQTT publishing is configured and enabled.
+Used by the systemd service condition.
+.TP
+.B cleanup
+Delete retained discovery entries recorded by this installation.
+Run before changing brokers when the old broker should be cleaned up.
+.TP
+.B enable
+Enable and start the systemd timer.
+.TP
+.B disable
+Disable the timer and stop the current collection service.
+.TP
+.B status
+Show the timer status.
+.SH FILES
+.TP
+.I /etc/sentrylab/sentrylab.conf
+INI configuration; root-readable only. Preserved on upgrade and removal.
+.TP
+.I /var/lib/sentrylab/
+Private MQTT discovery manifest and operation lock.
+.SH REMOVAL
+Use apt remove sentrylab-pve to keep configuration, or apt purge sentrylab-pve
+to remove configuration and state. MQTT cleanup is best effort when offline.
+.SH SEE ALSO
+.BR systemctl (1),
+.BR smartctl (8)

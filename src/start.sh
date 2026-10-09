@@ -34,7 +34,7 @@ DEBUG=true
 # Set to false to only show summary messages
 VERBOSE=${VERBOSE:-true}
 
-SYSTEMD_STAGING="$SCRIPT_DIR/systemd"
+SYSTEMD_STAGING="$SCRIPT_DIR/system"
 SYSTEMD_LIVE="/etc/systemd/system"
 
 box_title "Activating SentryLab Services"
@@ -85,16 +85,18 @@ box_value "Target directory" "$SYSTEMD_LIVE"
 
 # Move service and timer files from staging to live
 if ls "$SOURCE_DIR"/*.service >/dev/null 2>&1; then
-    cp "$SOURCE_DIR"/*.service "$SYSTEMD_LIVE/"
-    chmod 644 "$SYSTEMD_LIVE"/*.service
+    for unit in "$SOURCE_DIR"/*.service; do
+        install -m 0644 "$unit" "$SYSTEMD_LIVE/$(basename "$unit")"
+    done
     box_line "INFO: Services copied and permissions set"
 else
     box_line "WARNING: No *.service files found in source"
 fi
 
 if ls "$SOURCE_DIR"/*.timer >/dev/null 2>&1; then
-    cp "$SOURCE_DIR"/*.timer "$SYSTEMD_LIVE/"
-    chmod 644 "$SYSTEMD_LIVE"/*.timer
+    for unit in "$SOURCE_DIR"/*.timer; do
+        install -m 0644 "$unit" "$SYSTEMD_LIVE/$(basename "$unit")"
+    done
     box_line "INFO: Timers copied and permissions set"
 else
     box_line "WARNING: No *.timer files found in source"

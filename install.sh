@@ -1,69 +1,27 @@
-#!/bin/bash
-#
-# @file install.sh
-# @author CmPi <cmpi@webe.fr>
-# @repo https://github.com/CmPi/SentryLab-PVE
-# @brief Root installation script for SentryLab-PVE
-# @date creation 2025-12-28
-# @version 1.0.362
-# @usage sudo ./install.sh
-#
-
-set -euo pipefail
-
-# Check if running as root
-if [[ $EUID -ne 0 ]]; then
-   echo "This script must be run as root" 
-   exit 1
-fi
-
-CONF_FILE="/usr/local/etc/sentrylab.conf"
-DEST_DIR="/usr/local/bin/sentrylab"
-AUTO_DIR="/etc/systemd/system"
-EXPORT_DIR="/var/lib/sentrylab/csv"
-
-echo "--- SentryLab Installation ---"
-
-# 1. Create Directories
-mkdir -p "$DEST_DIR"
-mkdir -p "$DEST_DIR/system"
-mkdir -p "$EXPORT_DIR"
-
-# 2. Deploy Scripts from ./src
-echo "Deploying scripts to $DEST_DIR..."
-if [ -d "./src" ]; then
-    cp ./src/*.sh "$DEST_DIR/"
-    chmod 755 "$DEST_DIR"/*.sh
-else
-    echo "ERROR: ./src directory not found in current path!"
+#!/bin/sh
+# Install a built/downloaded Debian package through apt.
+set -eu
+if [ "$(id -u)" -ne 0 ]; then
+    echo "Run this installer as root: sudo sh install.sh /path/to/sentrylab-pve.deb" >&2
     exit 1
 fi
-
-# 3. Deploy Services & Timers to system subfolder
-echo "Staging systemd services and timers to $DEST_DIR/system..."
-if [ -d "./src/system" ]; then
-    cp ./src/system/*.service "$DEST_DIR/system/" 2>/dev/null || true
-    cp ./src/system/*.timer "$DEST_DIR/system/" 2>/dev/null || true
-    chmod 644 "$DEST_DIR/system"/*.service "$DEST_DIR/system"/*.timer 2>/dev/null || true
+project_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+if [ "$#" -eq 1 ]; then
+    package=$1
 else
-    echo "ERROR: ./src/system directory not found for services and timers!"
+    set -- "$project_dir"/dist/sentrylab-pve_*_all.deb
+    if [ "$#" -ne 1 ] || [ ! -f "$1" ]; then
+        echo "Download the deb from GitHub Releases, or run tools/build-deb.sh first." >&2
+        exit 1
+    fi
+    package=$1
+fi
+if [ ! -f "$package" ]; then
+    echo "Debian package not found." >&2
     exit 1
 fi
-
-# 4. Deploy Config (Template)
-if [ ! -f "$CONF_FILE" ]; then
-    echo "Installing configuration to $CONF_FILE..."
-    cp ./src/sentrylab.conf "$CONF_FILE"
-    chmod 600 "$CONF_FILE"
-else
-    echo "Configuration exists at $CONF_FILE. Skipping overwrite."
-fi
-
-echo ""
-echo "Installation complete."
-echo ""
-echo "Next steps:"
-echo "  1. Update $CONF_FILE with your settings"
-echo "  2. Test in DEBUG mode: DEBUG=true $DEST_DIR/discovery.sh"
-echo "  3. When ready, activate services: $DEST_DIR/start.sh"
-echo ""
+case "$package" in
+    /*) ;;
+    *) package="$(pwd)/$package" ;;
+esac
+exec apt-get install -y -- "$package"

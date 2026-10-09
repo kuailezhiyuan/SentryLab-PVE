@@ -1,0 +1,19 @@
+Source: sentrylab-pve
+Section: admin
+Priority: optional
+Maintainer: kuailezhiyuan <kuailezhiyuan@users.noreply.github.com>
+Build-Depends: debhelper-compat (= 13), python3, python3-paho-mqtt
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+Homepage: https://github.com/kuailezhiyuan/SentryLab-PVE
+Vcs-Git: https://github.com/kuailezhiyuan/SentryLab-PVE.git
+Vcs-Browser: https://github.com/kuailezhiyuan/SentryLab-PVE
+
+Package: sentrylab-pve
+Architecture: all
+Depends: ${misc:Depends}, python3 (>= 3.9), python3-paho-mqtt (>= 1.6), lm-sensors
+Suggests: smartmontools
+Description: CPU and disk temperatures for Home Assistant over MQTT
+ Reads Intel/AMD CPU and NVMe/hwmon disk temperatures and publishes
+ Home Assistant MQTT discovery. Optional SMART temperature polling skips
+ standby disks. Includes a systemd timer and configuration helper.

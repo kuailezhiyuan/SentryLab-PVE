@@ -1,0 +1,77 @@
+name: Debian package
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    container: debian:bookworm-slim
+    steps:
+      - name: Install build and test tools
+        run: |
+          apt-get update -qq
+          DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+            build-essential debhelper dpkg-dev fakeroot python3 python3-paho-mqtt \
+            lm-sensors mosquitto ca-certificates git
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Validate release version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          version=$(dpkg-parsechangelog --show-field Version)
+          test "$GITHUB_REF_NAME" = "v${version%%-*}"
+      - name: Build and run collector/MQTT tests
+        run: sh tools/build-deb.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: deb
+          path: dist/
+          if-no-files-found: error
+
+  lifecycle:
+    needs: build
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        debian: [bookworm, trixie]
+    container: debian:${{ matrix.debian }}-slim
+    steps:
+      - name: Install systemd and checkout runtime
+        run: |
+          apt-get update -qq
+          DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+            systemd ca-certificates git libstdc++6
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: deb
+          path: dist
+      - name: Test install, upgrade, remove and purge
+        run: |
+          sh tests/package-lifecycle.sh "$GITHUB_WORKSPACE"/dist/sentrylab-pve_*_all.deb
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [build, lifecycle]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: deb
+          path: dist
+      - name: Publish tested Debian package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/*.deb dist/SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes \
+            --title "SentryLab-PVE $GITHUB_REF_NAME"

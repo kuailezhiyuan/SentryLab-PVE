@@ -1,0 +1,25 @@
+[Unit]
+Description=SentryLab PVE temperature monitoring
+Documentation=https://github.com/kuailezhiyuan/SentryLab-PVE
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecCondition=/usr/bin/sentrylab ready
+ExecStart=/usr/bin/sentrylab run
+TimeoutStartSec=60
+User=root
+UMask=0077
+StateDirectory=sentrylab
+StateDirectoryMode=0700
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6

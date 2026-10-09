@@ -1,0 +1,19 @@
+#!/usr/bin/make -f
+%:
+	dh $@
+
+override_dh_auto_build:
+
+override_dh_auto_test:
+	python3 -m unittest discover -s tests -v
+
+override_dh_auto_install:
+	install -D -m 0755 src/sentrylab.py debian/sentrylab-pve/usr/bin/sentrylab
+	install -D -m 0600 debian/sentrylab.conf debian/sentrylab-pve/etc/sentrylab/sentrylab.conf
+
+override_dh_installsystemd:
+	dh_installsystemd --name=sentrylab-pve
+
+override_dh_fixperms:
+	dh_fixperms
+	chmod 0600 debian/sentrylab-pve/etc/sentrylab/sentrylab.conf

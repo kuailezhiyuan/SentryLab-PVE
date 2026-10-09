@@ -15,3 +15,13 @@ $RECYCLE.BIN/
 # System and temporary files
 *.log
 .DS_Store
+# Debian build output and local test caches
+dist/
+__pycache__/
+*.pyc
+debian/.debhelper/
+debian/debhelper-build-stamp
+debian/files
+debian/sentrylab-pve/
+debian/*.substvars
+debian/*.debhelper

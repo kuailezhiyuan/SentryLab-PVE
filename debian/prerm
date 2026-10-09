@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+# Stop the timer/service before removing MQTT discovery.
+#DEBHELPER#
+if [ "$1" = remove ] && [ -x /usr/bin/sentrylab ] && [ -f /etc/sentrylab/sentrylab.conf ]; then
+    if ! timeout --kill-after=2s 15s /usr/bin/sentrylab cleanup; then
+        echo "SentryLab: MQTT cleanup unavailable. Package removal will continue." >&2
+        echo "If the broker is offline, its retained discovery entries may need manual cleanup." >&2
+    fi
+fi
+exit 0

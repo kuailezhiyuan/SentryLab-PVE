@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+if [ "$1" = configure ]; then
+    # Only this package's credential file is touched.
+    if [ -f /etc/sentrylab/sentrylab.conf ]; then
+        chmod 600 /etc/sentrylab/sentrylab.conf
+    fi
+    install -d -m 0700 /var/lib/sentrylab
+fi
+#DEBHELPER#
+exit 0
