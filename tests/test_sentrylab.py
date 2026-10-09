@@ -46,10 +46,12 @@ class CollectorTests(unittest.TestCase):
     def test_nvme_id_survives_hwmon_renumbering(self):
         chip = self.chip(3, "nvme", {"temp1": (42000, "Composite")}, "SERIAL-001")
         first = app.collect_hwmon(app.Settings(), self.root)[0]
+        (chip / "device" / "model").write_text("Samsung SSD 960 EVO 250GB")
         chip.rename(self.root / "hwmon9")
         second = app.collect_hwmon(app.Settings(), self.root)[0]
         self.assertEqual(first.key, second.key)
         self.assertEqual(second.value, 42.0)
+        self.assertEqual(second.name, "NVMe Samsung SSD 960 EVO 250GB (SERIAL-001) Composite")
 
     def test_non_nvme_disk_hwmon(self):
         self.chip(2, "drivetemp", {"temp1": (35000, "Drive")}, "SATA-1")
@@ -78,7 +80,26 @@ class CollectorTests(unittest.TestCase):
         (self.root / "nvme0n1").mkdir()
         with patch.object(app.shutil, "which", return_value="/usr/sbin/smartctl"), patch.object(app, "command_json", return_value={"power_mode": "STANDBY"}) as run:
             self.assertEqual(app.collect_smart(self.root), [])
-            run.assert_called_once_with(["smartctl", "-j", "-A", "-n", "standby,0", "/dev/sda"])
+            self.assertEqual(run.call_count, 2)
+            run.assert_called_with(["smartctl", "-j", "-A", "-n", "standby,0", "/dev/sda"])
+
+    def test_smart_model_names_preserve_existing_entities(self):
+        (self.root / "sda/device").mkdir(parents=True)
+        (self.root / "sda/device/type").write_text("0")
+        (self.root / "sda/device/model").write_text("SAMSUNG MZ7KM480")
+        model = "SAMSUNG MZ7KM480HMHQ-000MV"
+        cases = [
+            ({"blockdevices": [{"name": "sda", "model": model}]}, {"temperature": {"current": 37}}, model, "sda"),
+            ({"blockdevices": None}, {"temperature": {"current": 37}}, "SAMSUNG MZ7KM480", "sda"),
+            ({}, {"temperature": {"current": 37}, "model_name": model, "serial_number": "SERIAL-01"}, model, "SERIAL-01"),
+        ]
+        for inventory, data, expected_model, identity in cases:
+            with self.subTest(inventory=inventory, identity=identity):
+                with patch.object(app.shutil, "which", return_value="/usr/sbin/smartctl"), patch.object(app, "command_json", side_effect=[inventory, data]):
+                    sensor, = app.collect_smart(self.root)
+                self.assertEqual(sensor.name, f"Disk {expected_model} (sda)")
+                self.assertEqual(sensor.key, app.stable_key("smart", identity, "temperature"))
+                self.assertEqual(sensor.value, 37.0)
 
     def test_smart_current_temperature_and_packed_raw_attribute(self):
         self.assertEqual(app.smart_temperature({"temperature": {"current": 37}}), 37.0)

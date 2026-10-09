@@ -6,12 +6,13 @@ if [ ! -f /.dockerenv ] && [ ! -f /run/.containerenv ]; then
     exit 1
 fi
 package=${1:?Pass the absolute path of the deb under test}
+package_version=$(dpkg-deb --field "$package" Version)
 canary=/etc/systemd/system/sentrylab-unrelated-test.service
 mkdir -p /etc/systemd/system
 printf '[Unit]\nDescription=Unrelated permission canary\n' > "$canary"
 chmod 0600 "$canary"
 apt-get install -y --no-install-recommends "$package"
-test "$(sentrylab --version)" = 1.1.0
+test "$(sentrylab --version)" = "${package_version%%-*}"
 test "$(stat -c %a /etc/sentrylab/sentrylab.conf)" = 600
 test "$(stat -c %a "$canary")" = 600
 sentrylab run
@@ -33,7 +34,7 @@ before=$(sha256sum /etc/sentrylab/sentrylab.conf)
 systemctl disable sentrylab-pve.timer
 upgrade_dir=$(mktemp -d)
 dpkg-deb --raw-extract "$package" "$upgrade_dir/package"
-sed -i 's/^Version:.*/Version: 1.1.1-1/' "$upgrade_dir/package/DEBIAN/control"
+sed -i "s/^Version:.*/Version: ${package_version}+lifecycle1/" "$upgrade_dir/package/DEBIAN/control"
 dpkg-deb --root-owner-group --build "$upgrade_dir/package" "$upgrade_dir/upgrade.deb"
 dpkg -i "$upgrade_dir/upgrade.deb"
 test "$before" = "$(sha256sum /etc/sentrylab/sentrylab.conf)"

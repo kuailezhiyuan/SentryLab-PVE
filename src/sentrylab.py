@@ -21,7 +21,7 @@ import sys
 import tempfile
 import threading
 
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 CONFIG_PATH = Path("/etc/sentrylab/sentrylab.conf")
 STATE_PATH = Path("/var/lib/sentrylab")
 CPU_DRIVERS = {"coretemp", "k10temp", "zenpower", "cpu_thermal", "soc_thermal"}
@@ -144,6 +144,7 @@ def collect_hwmon(settings, root=Path("/sys/class/hwmon")):
         else:
             continue
         identity = hwmon_identity(chip)
+        model = read_text(chip / "device" / "model")
         for value_path in sorted(chip.glob("temp*_input")):
             try:
                 value = temperature(float(read_text(value_path)) / 1000)
@@ -154,6 +155,8 @@ def collect_hwmon(settings, root=Path("/sys/class/hwmon")):
             channel = value_path.name.removesuffix("_input")
             label = read_text(chip / f"{channel}_label", channel)
             display_identity = identity if "/" not in identity else Path(identity).name
+            if kind == "disk" and model:
+                display_identity = f"{model} ({display_identity})"
             name = f"{title} {display_identity} {label}"
             sensors.append(Sensor(stable_key(kind, identity, channel), name, value, str(value_path)))
     return sensors
@@ -213,6 +216,16 @@ def collect_smart(root=Path("/sys/block")):
         LOG.warning("SMART is enabled but smartctl is absent; install smartmontools or disable SMART.")
         return []
     sensors = []
+    # lsblk reads cached udev/sysfs metadata, including complete ATA model names.
+    # Keep the original SMART query and identity so existing HA entities survive.
+    inventory = command_json(["lsblk", "--json", "--nodeps", "--output", "NAME,MODEL"])
+    rows = inventory.get("blockdevices", []) if isinstance(inventory, dict) else []
+    models = {
+        row["name"]: row["model"].strip()
+        for row in (rows if isinstance(rows, list) else [])
+        if isinstance(row, dict) and isinstance(row.get("name"), str)
+        and isinstance(row.get("model"), str) and row["model"].strip()
+    }
     for disk in sorted(root.glob("*")):
         if not re.fullmatch(r"(?:sd|hd)[a-z]+", disk.name):
             continue
@@ -224,8 +237,10 @@ def collect_smart(root=Path("/sys/block")):
         if value is None:
             continue
         serial = str(data.get("serial_number") or disk.name)
-        model = str(data.get("model_name") or disk.name)
-        sensors.append(Sensor(stable_key("smart", serial, "temperature"), f"Disk {model} {serial}", value, f"/dev/{disk.name}"))
+        model = str(data.get("model_name") or models.get(disk.name)
+                    or read_text(disk / "device" / "model") or disk.name)
+        name = f"Disk {model} ({disk.name})" if model != disk.name else f"Disk {disk.name}"
+        sensors.append(Sensor(stable_key("smart", serial, "temperature"), name, value, f"/dev/{disk.name}"))
     return sensors
 
 

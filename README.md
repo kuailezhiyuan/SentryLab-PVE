@@ -14,8 +14,8 @@
 从 [Releases](https://github.com/kuailezhiyuan/SentryLab-PVE/releases) 下载 `.deb`，或运行：
 
 ```sh
-curl -fLO https://github.com/kuailezhiyuan/SentryLab-PVE/releases/download/v1.1.0/sentrylab-pve_1.1.0-1_all.deb
-apt install ./sentrylab-pve_1.1.0-1_all.deb
+curl -fLO https://github.com/kuailezhiyuan/SentryLab-PVE/releases/download/v1.1.1/sentrylab-pve_1.1.1-1_all.deb
+apt install ./sentrylab-pve_1.1.1-1_all.deb
 sentrylab configure
 ```
 
@@ -32,9 +32,13 @@ sentrylab configure
 | --- | --- | --- |
 | Intel CPU | 开启 | `coretemp` hwmon，包括多 CPU/多核心 |
 | AMD CPU | 开启 | `k10temp` / `zenpower`，包括 Tctl/Tdie |
-| NVMe | 开启 | hwmon 温度和硬件序列号 |
+| NVMe | 开启 | hwmon 温度、硬件型号和序列号 |
 | 有 `drivetemp` hwmon 的硬盘 | 开启 | 读取已有 hwmon 温度 |
 | SATA/SAS/USB SMART 温度 | 关闭，可选 | `smartctl -j -A -n standby,0` |
+
+硬盘实体名称包含硬件型号；SATA 同时标明设备号，例如
+`Disk SAMSUNG MZ7KM480HMHQ-000MV (sdc)`。型号优先读取已有 SMART 数据或
+`lsblk` 的缓存信息，无需增加磁盘查询。显示名称更新保留已有 MQTT 实体标识和历史。
 
 只读取内核已经提供的传感器，不执行 `sensors-detect`、`modprobe`、硬盘自检、
 ZFS scrub、PVE 配置修改或主机重启。某个传感器暂时读不到不会中断其他温度采集。
@@ -139,7 +143,7 @@ sh tools/build-deb.sh
 docker build -t sentrylab-deb-test -f tools/Dockerfile .
 docker run --rm -v "$PWD:/workspace" sentrylab-deb-test sh tools/build-deb.sh
 docker run --rm -v "$PWD:/workspace:ro" sentrylab-deb-test \
-  sh tests/package-lifecycle.sh /workspace/dist/sentrylab-pve_1.1.0-1_all.deb
+  sh tests/package-lifecycle.sh /workspace/dist/sentrylab-pve_1.1.1-1_all.deb
 ```
 
 测试覆盖 Intel/AMD/NVMe/SATA 读取、稳定实体 ID、MQTT 实际发送和保留消息清理、

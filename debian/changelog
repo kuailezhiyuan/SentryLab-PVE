@@ -1,3 +1,10 @@
+sentrylab-pve (1.1.1-1) unstable; urgency=medium
+
+  * Display SATA disk models from cached block-device metadata.
+  * Include NVMe hardware models while preserving existing MQTT entity IDs.
+
+ -- kuailezhiyuan <kuailezhiyuan@users.noreply.github.com>  Fri, 09 Oct 2026 16:30:00 +0800
+
 sentrylab-pve (1.1.0-1) unstable; urgency=medium
 
   * Package a temperature collector with standard Debian lifecycle hooks.
